@@ -19,9 +19,9 @@ def make_outbound_call():
 
 @app.route('/recording/callback', methods=['POST'])
 def upload_recording():
+    dropbox_client = dropbox.Dropbox(os.getenv('DROPBOX_ACCESS_TOKEN'))
     recording_url = request.form['RecordingUrl']
     recording_sid = request.form['RecordingSid']
-    dropbox_client = dropbox.Dropbox(os.getenv('DROPBOX_ACCESS_TOKEN'))
     upload_path = f"/twilio-recording/{recording_sid}.mp3"
     with requests.get(recording_url, stream=True) as r:
          dropbox_client.files_upload(r.raw.read(), upload_path)
