@@ -1,21 +1,30 @@
 import os
 import dropbox
 import requests
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response
 from dotenv import load_dotenv
-from twilio.rest import Client
+from twilio.twiml.voice_response import Gather, VoiceResponse
 
 load_dotenv()
 app = Flask(__name__)
-twilio_client = Client()
 
-@app.route('/voice/call', methods=['GET'])
-def make_outbound_call(): 
-    twilio_client.calls.create(record=True, to=os.getenv('TWILIO_TO_NUMBER'), from_=os.getenv('TWILIO_FROM_NUMBER'), 
-        twiml=f"<Response><Say voice='alice'>Hello, I hope you're having a wonderful day</Say><Pause length='1'/><Say>Goodbye</Say></Response>",
-        recording_status_callback=f"{os.getenv('BASE_URL')}/recording/callback",
-        recording_status_callback_event='completed')
-    return jsonify({ 'message': 'Call has been placed'}), 201
+@app.route('/inbound/voice/call', methods=['POST'])
+def incoming_voice_call():
+    response = VoiceResponse()
+    gather = Gather(action='/outbound/voice/call', method='POST')
+    gather.say('Please enter the number to dial, followed by the pound sign')
+    response.append(gather)
+    response.say('We didn\'t receive any input. Goodbye')
+    return str(response)
+
+@app.route('/outbound/voice/call', methods=['POST'])
+def make_outbound_call():
+    phone_number = request.form['Digits']
+    response = VoiceResponse()
+    response.dial(number=f"+{phone_number}", record=True, recording_status_callback='/recording/callback', recording_status_callback_event='completed')
+    response.say('Thanks for calling in')
+    return str(response)
+
 
 @app.route('/recording/callback', methods=['POST'])
 def upload_recording():
