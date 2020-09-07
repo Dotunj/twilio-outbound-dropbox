@@ -3,7 +3,7 @@ import dropbox
 import requests
 from flask import Flask, request, Response
 from dotenv import load_dotenv
-from twilio.twiml.voice_response import Gather, VoiceResponse
+from twilio.twiml.voice_response import Gather, VoiceResponse, Dial
 
 load_dotenv()
 app = Flask(__name__)
@@ -21,10 +21,16 @@ def incoming_voice_call():
 def make_outbound_call():
     phone_number = request.form['Digits']
     response = VoiceResponse()
-    response.dial(number=f"+{phone_number}", record=True, recording_status_callback='/recording/callback', recording_status_callback_event='completed')
-    response.say('Thanks for calling in')
+    dial = Dial(record=True, recording_status_callback='/recording/callback', recording_status_callback_event='completed')
+    dial.number(f"+{phone_number}", url='/seek/consent')
+    response.append(dial)
     return str(response)
 
+@app.route('/seek/consent', methods=['POST'])
+def seek_consent():
+    response = VoiceResponse()
+    response.say('This call is going to be recorded. You can hang up if you\'re not okay with it')
+    return str(response)
 
 @app.route('/recording/callback', methods=['POST'])
 def upload_recording():
